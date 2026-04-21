@@ -1,0 +1,164 @@
+/// Copyright (c) 2023 Kodeco Inc.
+///
+/// Permission is hereby granted, free of charge, to any person obtaining a copy
+/// of this software and associated documentation files (the "Software"), to deal
+/// in the Software without restriction, including without limitation the rights
+/// to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+/// copies of the Software, and to permit persons to whom the Software is
+/// furnished to do so, subject to the following conditions:
+///
+/// The above copyright notice and this permission notice shall be included in
+/// all copies or substantial portions of the Software.
+///
+/// Notwithstanding the foregoing, you may not use, copy, modify, merge, publish,
+/// distribute, sublicense, create a derivative work, and/or sell copies of the
+/// Software in any work that is designed, intended, or marketed for pedagogical or
+/// instructional purposes related to programming, coding, application development,
+/// or information technology.  Permission for such use, copying, modification,
+/// merger, publication, distribution, sublicensing, creation of derivative works,
+/// or sale is expressly withheld.
+///
+/// This project and source code may use libraries or frameworks that are
+/// released under various Open-Source licenses. Use of those libraries and
+/// frameworks are governed by their own individual licenses.
+///
+/// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+/// IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+/// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+/// AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+/// LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+/// OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+/// THE SOFTWARE.
+
+import SwiftUI
+
+/// The main list of available for download files.
+struct ListView: View {
+  let model: SuperStorageModel
+  /// The file list.
+  @State var files: [DownloadFile] = []
+  /// The server status message.
+  @State var status = ""
+  /// The file to present for download.
+  @State var selected = DownloadFile.empty {
+    didSet {
+      isDisplayingDownload = true
+    }
+  }
+  @State var isDisplayingDownload = false
+
+  /// The latest error message.
+  @State var lastErrorMessage = "None" {
+    didSet {
+      isDisplayingError = true
+    }
+  }
+  @State var isDisplayingError = false
+
+  var body: some View {
+    NavigationStack {
+      VStack {
+        // The list of files available for download.
+        List {
+          Section(content: {
+            if files.isEmpty {
+              ProgressView().padding()
+            }
+            ForEach(files) { file in
+              Button(action: {
+                selected = file
+              }, label: {
+                FileListItem(file: file)
+              })
+            }
+          }, header: {
+            Label(" SuperStorage", systemImage: "externaldrive.badge.icloud")
+              .font(.custom("SerreriaSobria", size: 27))
+              .foregroundColor(.accentColor)
+              .padding(.bottom, 20)
+          }, footer: {
+            Text(status)
+          })
+        }
+        .listStyle(.insetGrouped)
+        .animation(.easeOut(duration: 0.33), value: files)
+      }
+      .alert("Error", isPresented: $isDisplayingError, actions: {
+        Button("Close", role: .cancel) { }
+      }, message: {
+        Text(lastErrorMessage)
+      })
+//      .onAppear(perform: {
+//        guard files.isEmpty else { return }
+//        Task {
+//          do {
+//  //          files = try await model.availableFiles()
+//  //          status = try await model.status()
+//            let files = try await model.availableFiles()
+//            async let status = model.status()
+//            for i in 0...1000 {
+//              print("🤍 \(i)")
+//            }
+//  //          let (filesResult, statusResult) = try await (files, status)
+//            print("------1")
+//  //          try? await Task.sleep(for: .seconds(2))
+//            print("------2")
+//            self.status = try await status
+////            self.files = try await files
+//            self.files = files
+//           
+//          } catch {
+//            lastErrorMessage = error.localizedDescription
+//          }
+//        }
+//        
+//        for i in 0...1000 {
+//          print("♥️ \(i)")
+//        }
+//      })
+      .task {
+        guard files.isEmpty else { return }
+        
+        do {
+//          files = try await model.availableFiles()
+//          status = try await model.status()
+          
+          
+//          
+          async let files = model.availableFiles()
+          async let status = model.status()
+          
+//          DispatchQueue.main.async {
+//            for i in 0...10000 {
+//              print("♥️ \(i)")
+//            }
+//          }
+//          for i in 0...10000 {
+//            print("♥️ \(i)")
+//          }
+          
+//          let filesResult = try await files
+//          let statusResult = try await status
+          
+//          let (filesResult, statusResult) = try await (files, status)
+          
+//          print("------1")
+//          try? await Task.sleep(for: .seconds(2))
+//          print("------2")
+//          let fileResult = try await files
+//          let statusResult = try await status
+          self.status = try await status
+          self.files = try await files
+          
+//          self.status = statusResult
+//          self.files = filesResult
+        } catch {
+          lastErrorMessage = error.localizedDescription
+        }
+      }
+      .navigationDestination(isPresented: $isDisplayingDownload) {
+        DownloadView(file: selected).environmentObject(model)
+      }
+    }
+  }
+}

@@ -15,10 +15,10 @@
             buildForAnalyzing = "YES">
             <BuildableReference
                BuildableIdentifier = "primary"
-               BlueprintIdentifier = "9CA9D30226B6DFBD00F9C822"
-               BuildableName = "01-why-modern-swift-concurrency.app"
-               BlueprintName = "01-why-modern-swift-concurrency"
-               ReferencedContainer = "container:LittleJohn.xcodeproj">
+               BlueprintIdentifier = "9C972CCE26C116F600E48FAC"
+               BuildableName = "02-getting-started-with-async-await.app"
+               BlueprintName = "02-getting-started-with-async-await"
+               ReferencedContainer = "container:SuperStorage.xcodeproj">
             </BuildableReference>
          </BuildActionEntry>
       </BuildActionEntries>
@@ -44,10 +44,10 @@
          runnableDebuggingMode = "0">
          <BuildableReference
             BuildableIdentifier = "primary"
-            BlueprintIdentifier = "9CA9D30226B6DFBD00F9C822"
-            BuildableName = "01-why-modern-swift-concurrency.app"
-            BlueprintName = "01-why-modern-swift-concurrency"
-            ReferencedContainer = "container:LittleJohn.xcodeproj">
+            BlueprintIdentifier = "9C972CCE26C116F600E48FAC"
+            BuildableName = "02-getting-started-with-async-await.app"
+            BlueprintName = "02-getting-started-with-async-await"
+            ReferencedContainer = "container:SuperStorage.xcodeproj">
          </BuildableReference>
       </BuildableProductRunnable>
    </LaunchAction>
@@ -61,10 +61,10 @@
          runnableDebuggingMode = "0">
          <BuildableReference
             BuildableIdentifier = "primary"
-            BlueprintIdentifier = "9CA9D30226B6DFBD00F9C822"
-            BuildableName = "01-why-modern-swift-concurrency.app"
-            BlueprintName = "01-why-modern-swift-concurrency"
-            ReferencedContainer = "container:LittleJohn.xcodeproj">
+            BlueprintIdentifier = "9C972CCE26C116F600E48FAC"
+            BuildableName = "02-getting-started-with-async-await.app"
+            BlueprintName = "02-getting-started-with-async-await"
+            ReferencedContainer = "container:SuperStorage.xcodeproj">
          </BuildableReference>
       </BuildableProductRunnable>
    </ProfileAction>
