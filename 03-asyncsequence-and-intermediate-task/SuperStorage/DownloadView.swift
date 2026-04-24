@@ -105,6 +105,10 @@ struct DownloadView: View {
         },
         downloadMultipleAction: {
           // Download a file in multiple concurrent parts.
+          Task {
+            fileData = try await model.multiDownloadWithProgress(file: file)
+          }
+          
         }
       )
       if !model.downloads.isEmpty {

@@ -104,6 +104,7 @@ class SuperStorageModel: ObservableObject {
 
   /// Downloads a file using multiple concurrent connections, returns the final content, and updates the download progress.
   func multiDownloadWithProgress(file: DownloadFile) async throws -> Data {
+    
     func partInfo(index: Int, of count: Int) -> (offset: Int, size: Int, name: String) {
       let standardPartSize = Int((Double(file.size) / Double(count)).rounded(.up))
       let partOffset = index * standardPartSize
@@ -111,11 +112,24 @@ class SuperStorageModel: ObservableObject {
       let partName = "\(file.name) (part \(index + 1))"
       return (offset: partOffset, size: partSize, name: partName)
     }
+    
     let total = 4
     let parts = (0..<total).map { partInfo(index: $0, of: total) }
     print(parts)
     // Add challenge code here.
-    return Data()
+    
+    async let part1 = downloadWithProgress(fileName: file.name, name: parts[0].name, size: parts[0].size, offset: parts[0].offset)
+    async let part2 = downloadWithProgress(fileName: file.name, name: parts[1].name, size: parts[1].size, offset: parts[1].offset)
+    async let part3 = downloadWithProgress(fileName: file.name, name: parts[2].name, size: parts[2].size, offset: parts[2].offset)
+    async let part4 = downloadWithProgress(fileName: file.name, name: parts[3].name, size: parts[3].size, offset: parts[3].offset)
+//    async let temp = [await part1, try await part2, try await part3, try await part4]
+    var temp = Data()
+    temp.append(try await part1)
+    temp.append(try await part2)
+    temp.append(try await part3)
+    temp.append(try await part4)
+    
+    return temp
   }
 
   /// Flag that stops ongoing downloads.
