@@ -15,4 +15,11 @@
          location = "group:SuperStorage.xcodeproj">
       </FileRef>
    </Group>
+   <Group
+      location = "group:03-asyncsequence-and-intermediate-task"
+      name = "03-asyncsequence-and-intermediate-task">
+      <FileRef
+         location = "group:SuperStorage.xcodeproj">
+      </FileRef>
+   </Group>
 </Workspace>
