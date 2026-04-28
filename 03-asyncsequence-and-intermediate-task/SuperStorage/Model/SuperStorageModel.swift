@@ -86,9 +86,15 @@ class SuperStorageModel: ObservableObject {
     var accumulator = ByteAccumulator(name: name, size: size)
     while await !stopDownloads, !accumulator.checkCompleted() {
       while !accumulator.isBatchCompleted, let byte = try await asyncDownloadIterator.next() {
+//        try Task.checkCancellation()
+//        if Task.isCancelled {
+//          let time = DispatchTime.now().uptimeNanoseconds
+//          print("Nanoseconds: \(time)")
+//        }
         accumulator.append(byte)
       }
-      
+      try Task.checkCancellation()
+      try await Task.sleep(nanoseconds: 1000000000)
       let progress = accumulator.progress
       Task.detached (priority: .medium) {
         await self.updateDownload(name: name, progress: progress)
@@ -118,18 +124,63 @@ class SuperStorageModel: ObservableObject {
     print(parts)
     // Add challenge code here.
     
-    async let part1 = downloadWithProgress(fileName: file.name, name: parts[0].name, size: parts[0].size, offset: parts[0].offset)
-    async let part2 = downloadWithProgress(fileName: file.name, name: parts[1].name, size: parts[1].size, offset: parts[1].offset)
-    async let part3 = downloadWithProgress(fileName: file.name, name: parts[2].name, size: parts[2].size, offset: parts[2].offset)
-    async let part4 = downloadWithProgress(fileName: file.name, name: parts[3].name, size: parts[3].size, offset: parts[3].offset)
-//    async let temp = [await part1, try await part2, try await part3, try await part4]
-    var temp = Data()
-    temp.append(try await part1)
-    temp.append(try await part2)
-    temp.append(try await part3)
-    temp.append(try await part4)
+//    async let part1 = downloadWithProgress(fileName: file.name, name: parts[0].name, size: parts[0].size, offset: parts[0].offset)
+//    async let part2 = downloadWithProgress(fileName: file.name, name: parts[1].name, size: parts[1].size, offset: parts[1].offset)
+//    async let part3 = downloadWithProgress(fileName: file.name, name: parts[2].name, size: parts[2].size, offset: parts[2].offset)
+//    async let part4 = downloadWithProgress(fileName: file.name, name: parts[3].name, size: parts[3].size, offset: parts[3].offset)
+////    async let temp = [await part1, try await part2, try await part3, try await part4]
+//    var temp = Data()
+//    temp.append(try await part1)
+//    temp.append(try await part2)
+//    temp.append(try await part3)
+//    temp.append(try await part4)
+
     
+///    try optimizaton if we have a lot of parts.
+    ///    VARIANT  2:
+//    let temp = try await optimizationWithTask(file: file, parts: parts)
+    let temp = try await useTaskGroupe(file: file, parts: parts)
     return temp
+  }
+  
+  private func useTaskGroupe(file: DownloadFile, parts: [(offset: Int, size: Int, name: String)]) async throws -> Data {
+    try await withThrowingTaskGroup(of: (Int, Data).self) { group in
+      for (index, part) in parts.enumerated()  {
+            group.addTask {
+                // Each task only RETURNS a value, never touches a shared array
+              let data =  try await self.downloadWithProgress(fileName: file.name, name: part.name, size: part.size, offset: part.offset)
+              return (index, data)
+            }
+        }
+
+        // This loop runs on ONE task, sequentially — no race
+      var results = Array<Data?>(repeating: nil, count: parts.count)
+      var result = Data()
+      for try await (index, data) in group {
+        results[index] = data
+      }
+      results.compactMap { $0 }.forEach { data in
+        result.append(data)
+      }
+      return result
+      
+    }
+  }
+  private func optimizationWithTask(file: DownloadFile, parts: [(offset: Int, size: Int, name: String)]) async throws -> Data {
+    
+    let tasks = parts.map { part in
+      Task {
+        try await downloadWithProgress(fileName: file.name, name: part.name, size: part.size, offset: part.offset)
+      }
+    }
+    
+    // 2. Await each one in order
+    var results = Data()
+    for task in tasks {
+      let data = try await task.value  // waits for this specific task
+      results.append(data)
+    }
+    return results
   }
 
   /// Flag that stops ongoing downloads.

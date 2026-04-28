@@ -105,8 +105,13 @@ struct DownloadView: View {
         },
         downloadMultipleAction: {
           // Download a file in multiple concurrent parts.
-          Task {
-            fileData = try await model.multiDownloadWithProgress(file: file)
+          isDownloadActive = true
+          downloadTask = Task() {
+            do {
+              fileData = try await model.multiDownloadWithProgress(file: file)
+            
+            } catch {}
+            isDownloadActive = false
           }
           
         }
@@ -138,7 +143,10 @@ struct DownloadView: View {
     .onDisappear {
       fileData = nil
       model.reset()
+      
       downloadTask?.cancel()
+//      let time = DispatchTime.now().uptimeNanoseconds
+//      print("Nanoseconds cancel: \(time)")
     }
   }
 }
