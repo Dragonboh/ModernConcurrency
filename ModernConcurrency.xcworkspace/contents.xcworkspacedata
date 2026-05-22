@@ -22,4 +22,11 @@
          location = "group:SuperStorage.xcodeproj">
       </FileRef>
    </Group>
+   <Group
+      location = "group:04-custom-asynchronous-sequences-with-asyncstream"
+      name = "04-custom-asynchronous-sequences-with-asyncstream">
+      <FileRef
+         location = "group:Blabber.xcodeproj">
+      </FileRef>
+   </Group>
 </Workspace>
