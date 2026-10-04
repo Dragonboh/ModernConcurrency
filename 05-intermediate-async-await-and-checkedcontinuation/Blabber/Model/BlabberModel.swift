@@ -1,4 +1,4 @@
-`/// Copyright (c) 2023 Kodeco Inc.
+/// Copyright (c) 2023 Kodeco Inc.
 ///
 /// Permission is hereby granted, free of charge, to any person obtaining a copy
 /// of this software and associated documentation files (the "Software"), to deal
@@ -49,30 +49,15 @@ class BlabberModel: ObservableObject {
 
   /// Shares the current user's address in chat.
   func shareLocation() async throws {
+    let location: CLLocation = try await withCheckedThrowingContinuation { [weak self] continuation in
+//      continuation.resume
+      
+    }
   }
 
-  func observeAppStatus() async {
-//    for await _ in NotificationCenter.default.notifications(for: UIApplication.willResignActiveNotification) {
-//      try? await say("\(username) went away", isSystemMessage: true)
-//    }
-    
-    Task {
-      for await _ in NotificationCenter.default.notifications(for: UIApplication.willResignActiveNotification) {
-        try? await say("\(username) went away", isSystemMessage: true)
-      }
-    }
-    
-    Task {
-      for await _ in NotificationCenter.default.notifications(for: UIApplication.didBecomeActiveNotification) {
-        try? await say("\(username) came back", isSystemMessage: true)
-      }
-    }
-  }
-  
   /// Does a countdown and sends the message.
   func countdown(to message: String) async throws {
     guard !message.isEmpty else { return }
-    
     var countdown = 3
     let counter = AsyncStream<String> {
       guard countdown >= 0 else { return nil }
@@ -83,14 +68,14 @@ class BlabberModel: ObservableObject {
       }
       defer { countdown -= 1 }
       if countdown == 0 {
-        return "!  " + message
+        return "🎉 " + message
       } else {
         return "\(countdown)..."
       }
     }
-    
-    for await countdownMessage in counter {
-      try await say(countdownMessage)
+
+    try await counter.forEach {
+      try await say($0)
     }
   }
 
@@ -99,7 +84,7 @@ class BlabberModel: ObservableObject {
     guard
       let query = username.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed),
       let url = URL(string: "http://localhost:8080/chat/room?\(query)")
-    else {
+      else {
       throw "Invalid username"
     }
 
@@ -123,56 +108,38 @@ class BlabberModel: ObservableObject {
   /// Reads the server chat stream and updates the data model.
   private func readMessages(stream: URLSession.AsyncBytes) async throws {
     var iterator = stream.lines.makeAsyncIterator()
+
     guard let first = try await iterator.next() else {
       throw "No response from server"
     }
-    
+
     guard
       let data = first.data(using: .utf8),
-      let status = try? JSONDecoder().decode(ServerStatus.self, from: data)
+      let status = try? JSONDecoder()
+        .decode(ServerStatus.self, from: data)
     else {
       throw "Invalid response from server"
     }
-    
-    messages.append(Message(message: "\(status.activeUsers) active users"))
-    
-    let willResignActive = Task {
-//      await observeAppStatus()
-      for await _ in NotificationCenter.default.notifications(for: UIApplication.willResignActiveNotification) {
-        try? await say("\(username) went away", isSystemMessage: true)
-      }
-    }
-    
-    let didBecomeActive = Task {
-//      await observeAppStatus()
-      for await _ in NotificationCenter.default.notifications(for: UIApplication.didBecomeActiveNotification) {
-        try? await say("\(username) came back", isSystemMessage: true)
-      }
+
+    messages.append(
+      Message(
+        message: "\(status.activeUsers) active users"
+      )
+    )
+
+    let notifications = Task {
+      await observeAppStatus()
     }
     defer {
-      willResignActive.cancel()
-      didBecomeActive.cancel()
-      print("notification cancelled")
+      notifications.cancel()
     }
-    
-//    let notification = Task {
-//      await observeAppStatus()
-//    }
-//
-//    defer {
-//      notification.cancel()
-//    }
-    
+
     for try await line in stream.lines {
       if let data = line.data(using: .utf8),
-         let update = try? JSONDecoder().decode(Message.self, from: data)
-      {
+        let update = try? JSONDecoder().decode(Message.self, from: data) {
         messages.append(update)
       }
     }
-    
-    
-    
   }
 
   /// Sends the user's message to the chat server
@@ -191,6 +158,22 @@ class BlabberModel: ObservableObject {
     let (_, response) = try await urlSession.data(for: request, delegate: nil)
     guard (response as? HTTPURLResponse)?.statusCode == 200 else {
       throw "The server responded with an error."
+    }
+  }
+
+  func observeAppStatus() async {
+    Task {
+      for await _ in NotificationCenter.default
+        .notifications(for: UIApplication.willResignActiveNotification) {
+        try? await say("\(username) went away", isSystemMessage: true)
+      }
+    }
+
+    Task {
+      for await _ in NotificationCenter.default
+        .notifications(for: UIApplication.didBecomeActiveNotification) {
+        try? await say("\(username) came back", isSystemMessage: true)
+      }
     }
   }
 

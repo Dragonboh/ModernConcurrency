@@ -29,4 +29,11 @@
          location = "group:Blabber.xcodeproj">
       </FileRef>
    </Group>
+   <Group
+      location = "group:05-intermediate-async-await-and-checkedcontinuation"
+      name = "05-intermediate-async-await-and-checkedcontinuation">
+      <FileRef
+         location = "group:Blabber.xcodeproj">
+      </FileRef>
+   </Group>
 </Workspace>
