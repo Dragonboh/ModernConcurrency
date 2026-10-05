@@ -40,6 +40,9 @@ import UIKit
 class BlabberModel: ObservableObject {
   var username = ""
   var urlSession = URLSession.shared
+  
+  private let manager = CLLocationManager()
+  private var delegate: ChatLocationDelegate?
 
   nonisolated init() {
   }
@@ -49,15 +52,36 @@ class BlabberModel: ObservableObject {
 
   /// Shares the current user's address in chat.
   func shareLocation() async throws {
-    let location: CLLocation = try await withCheckedThrowingContinuation { [weak self] continuation in
-//      continuation.resume
-      
-    }
+    let _: CLLocation = try await withCheckedThrowingContinuation { [weak self] continuation in
+      guard let self = self else { return }
+      delegate = ChatLocationDelegate(manager: manager, continuation: continuation)
+      if manager.authorizationStatus == .authorizedWhenInUse {
+        manager.startUpdatingLocation()
+      }}
   }
 
+  func observeAppStatus() async {
+//    for await _ in NotificationCenter.default.notifications(for: UIApplication.willResignActiveNotification) {
+//      try? await say("\(username) went away", isSystemMessage: true)
+//    }
+    
+    Task {
+      for await _ in NotificationCenter.default.notifications(for: UIApplication.willResignActiveNotification) {
+        try? await say("\(username) went away", isSystemMessage: true)
+      }
+    }
+    
+    Task {
+      for await _ in NotificationCenter.default.notifications(for: UIApplication.didBecomeActiveNotification) {
+        try? await say("\(username) came back", isSystemMessage: true)
+      }
+    }
+  }
+  
   /// Does a countdown and sends the message.
   func countdown(to message: String) async throws {
     guard !message.isEmpty else { return }
+    
     var countdown = 3
     let counter = AsyncStream<String> {
       guard countdown >= 0 else { return nil }
@@ -68,14 +92,14 @@ class BlabberModel: ObservableObject {
       }
       defer { countdown -= 1 }
       if countdown == 0 {
-        return "🎉 " + message
+        return "!  " + message
       } else {
         return "\(countdown)..."
       }
     }
-
-    try await counter.forEach {
-      try await say($0)
+    
+    for await countdownMessage in counter {
+      try await say(countdownMessage)
     }
   }
 
@@ -84,7 +108,7 @@ class BlabberModel: ObservableObject {
     guard
       let query = username.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed),
       let url = URL(string: "http://localhost:8080/chat/room?\(query)")
-      else {
+    else {
       throw "Invalid username"
     }
 
@@ -108,38 +132,56 @@ class BlabberModel: ObservableObject {
   /// Reads the server chat stream and updates the data model.
   private func readMessages(stream: URLSession.AsyncBytes) async throws {
     var iterator = stream.lines.makeAsyncIterator()
-
     guard let first = try await iterator.next() else {
       throw "No response from server"
     }
-
+    
     guard
       let data = first.data(using: .utf8),
-      let status = try? JSONDecoder()
-        .decode(ServerStatus.self, from: data)
+      let status = try? JSONDecoder().decode(ServerStatus.self, from: data)
     else {
       throw "Invalid response from server"
     }
-
-    messages.append(
-      Message(
-        message: "\(status.activeUsers) active users"
-      )
-    )
-
-    let notifications = Task {
-      await observeAppStatus()
+    
+    messages.append(Message(message: "\(status.activeUsers) active users"))
+    
+    let willResignActive = Task {
+//      await observeAppStatus()
+      for await _ in NotificationCenter.default.notifications(for: UIApplication.willResignActiveNotification) {
+        try? await say("\(username) went away", isSystemMessage: true)
+      }
+    }
+    
+    let didBecomeActive = Task {
+//      await observeAppStatus()
+      for await _ in NotificationCenter.default.notifications(for: UIApplication.didBecomeActiveNotification) {
+        try? await say("\(username) came back", isSystemMessage: true)
+      }
     }
     defer {
-      notifications.cancel()
+      willResignActive.cancel()
+      didBecomeActive.cancel()
+      print("notification cancelled")
     }
-
+    
+//    let notification = Task {
+//      await observeAppStatus()
+//    }
+//
+//    defer {
+//      notification.cancel()
+//    }
+    
     for try await line in stream.lines {
       if let data = line.data(using: .utf8),
-        let update = try? JSONDecoder().decode(Message.self, from: data) {
+         let update = try? JSONDecoder().decode(Message.self, from: data)
+      {
         messages.append(update)
       }
     }
+    
+    
+    
   }
 
   /// Sends the user's message to the chat server
@@ -158,22 +200,6 @@ class BlabberModel: ObservableObject {
     let (_, response) = try await urlSession.data(for: request, delegate: nil)
     guard (response as? HTTPURLResponse)?.statusCode == 200 else {
       throw "The server responded with an error."
-    }
-  }
-
-  func observeAppStatus() async {
-    Task {
-      for await _ in NotificationCenter.default
-        .notifications(for: UIApplication.willResignActiveNotification) {
-        try? await say("\(username) went away", isSystemMessage: true)
-      }
-    }
-
-    Task {
-      for await _ in NotificationCenter.default
-        .notifications(for: UIApplication.didBecomeActiveNotification) {
-        try? await say("\(username) came back", isSystemMessage: true)
-      }
     }
   }
 
